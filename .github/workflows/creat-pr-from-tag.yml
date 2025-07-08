@@ -1,0 +1,37 @@
+name: Create PR from Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create PR from'
+        required: true
+        default: 'v3.0.2'
+      target-branch:
+        description: 'Target branch for the PR'
+        required: true
+        default: 'main'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_PAT }}
+
+      - name: Create branch from tag
+        run: |
+          git fetch --tags
+          git checkout -b branch-${{ inputs.tag }} ${{ inputs.tag }}
+          git push origin branch-${{ inputs.tag }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: branch-${{ inputs.tag }}
+          base: ${{ inputs.target-branch }}
+          title: 'PR from tag ${{ github.event.inputs.tag }}'
+          body: 'This PR was created from tag ${{ github.event.inputs.tag }}'
+          token: ${{ secrets.MY_PAT }}

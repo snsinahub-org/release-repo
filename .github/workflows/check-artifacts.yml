@@ -1,0 +1,19 @@
+name: artifacts
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check_artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: list artifacts
+        uses: snsinahub/manage-artifacts@first-version
+        with:
+          action: list
+  

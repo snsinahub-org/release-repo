@@ -1,0 +1,59 @@
+name: Manual release
+
+on:
+  workflow_dispatch:
+    inputs:
+      starts-with:
+        type: string
+        default: ''
+        required: false
+      prefix:
+        type: string
+        default: ''
+        required: false
+      release-type:
+        type: choice
+        options:
+          - PATCH
+          - MINOR
+          - MAJOR
+      branch:
+         type: string
+         default: main
+         required: false
+          
+  
+       
+jobs:     
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:     
+      version_number: ${{ steps.semver1.outputs.version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4         
+
+      - name: 'semver'
+        id: semver1
+        uses: "snsinahub-org/semver@v4.0.1"
+        with:
+          type: "${{ inputs.release-type }}"
+          prefix: "${{ inputs.prefix }}"
+          body: "temp body"  
+          create-release: 'yes'
+          prerelease: 'no'
+          exit-on-missing-type: 'no'
+          branch: ${{ inputs.branch }}
+          starts-with: "${{ inputs.starts-with }}"
+          files: |
+            pom.xml
+      - name: 'print version'
+        run: |
+         echo ${{ steps.semver1.outputs.version }}
+  
+    
+    
+    
+ 
+        

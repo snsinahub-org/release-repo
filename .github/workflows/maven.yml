@@ -1,0 +1,27 @@
+name: check java and maven versions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-versions:
+    runs-on: [ self-hosted, mvn, automated ]
+
+    steps:
+      - name: Setup Node
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin' 
+
+      - name: Setup Maven Action
+        uses: s4u/setup-maven-action@v1.14.0
+        with:
+          java-version: 21
+          maven-version: 3.8.6
+
+      - name: check java version
+        run: |
+          java -version
+          mvn -version
+        continue-on-error: true

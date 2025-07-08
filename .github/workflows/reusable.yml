@@ -1,0 +1,28 @@
+name: reusable
+on:
+  workflow_call:
+    inputs:
+      aws-access-key-id:
+        type: string
+      aws-secret-access-key:
+        type: string
+      aws-region:
+        type: string
+      role-to-assume:
+        type: string
+      role-duration-seconds:
+        type: string
+  
+jobs:
+  hello_workd:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ inputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.role-to-assume }}
+          role-duration-seconds: ${{ inputs.role-duration-seconds }}

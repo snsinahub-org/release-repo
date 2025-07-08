@@ -1,0 +1,42 @@
+name: auto deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        default: dev
+        type: string
+      release:
+        required: true
+        default: 18.5.0
+        type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        default: dev
+        type: string
+      release:
+        required: true
+        default: 18.5.0
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs: 
+      random_number: ${{ steps.rand.outputs.random_number }}
+
+    steps:
+      - name: deploy to ${{ inputs.environment }} - ${{ inputs.release }}
+        run: echo code has been deployed to environment ${{ inputs.environment }} - ${{ inputs.release }}
+
+      
+      - name: generate a random number and print
+        id: rand
+        run: |                  
+          echo "random_number=123456" >> $GITHUB_OUTPUT
+        
+  

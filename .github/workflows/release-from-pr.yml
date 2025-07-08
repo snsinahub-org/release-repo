@@ -1,0 +1,112 @@
+
+name: combined release
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number'
+        required: true
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  list-changed-files:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')
+    
+    steps:     
+
+      - name: Get PR file changes
+        id: get-pr
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+          REPO=${{ github.repository }}
+          OWNER=${{ github.repository_owner }}
+          REPO_NAME=$(echo $REPO | cut -d'/' -f2)
+          echo "pr_number="$PR_NUMBER >> $GITHUB_OUTPUT
+          echo "repo="$REPO >> $GITHUB_OUTPUT
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get PR file changes
+        id: get-changes
+        run: |
+          PR_NUMBER=${{ steps.get-pr.outputs.pr_number }}
+          REPO=${{ steps.get-pr.outputs.repo }}
+          OWNER=${{ steps.get-pr.outputs.owner }}
+          REPO_NAME=${{ steps.get-pr.outputs.repo_name }}
+          result=$(gh api graphql -f query='
+          query {
+            repository(owner: "'"$OWNER"'", name: "'"$REPO_NAME"'") {
+              pullRequest(number: '"$PR_NUMBER"') {
+                files(first: 100) {
+                  edges {
+                    node {
+                      path
+                    }
+                  }
+                }
+              }
+            }
+          }')
+          files="$(echo $result | jq -r '.data.repository.pullRequest.files.edges[].node.path')" 
+          fileList= echo "$files" | awk '{printf("\"'%s'\" " ,$0)} END { printf "\n" }'
+          echo FILELIST "$fileList"
+          echo FILELIST without quotes $fileList
+          echo "files="$files >> $GITHUB_OUTPUT
+          echo "results=${result}" >> $GITHUB_OUTPUT
+          echo "fileList="$fileList >> $GITHUB_OUTPUT
+          branches=$(gh api graphql -f query='
+          query {
+            repository(owner: "'"$OWNER"'", name: "'"$REPO_NAME"'") {
+              pullRequest(number: '"$PR_NUMBER"') {
+                baseRefName
+                headRefName
+              }
+            }
+          }')
+          base="$(echo $branches | jq -r '.data.repository.pullRequest.baseRefName')"
+          compare="$(echo $branches | jq -r '.data.repository.pullRequest.headRefName')"
+          
+          echo $branches
+          echo $base
+          echo $compare
+          echo "base="$base >> $GITHUB_OUTPUT
+          echo "compare=${compare}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get-changes.outputs.compare }}
+      - name: Print list of files
+        run: |
+          echo "${{ steps.get-changes.outputs.files }}"
+          echo "${{ steps.get-changes.outputs.results }}"
+      - name: Create release and upload files
+        run: |
+          git branch
+          gh pr view ${{ steps.get-pr.outputs.pr_number }}
+          TAG="v1.0.0"
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          FILES=(${{ steps.get-changes.outputs.files }})
+          # FILES="${{ steps.get-changes.outputs.files }}"
+          echo $FILES
+          gh release delete $TAG
+          gh release create $TAG
+          mkdir upload
+          for file in "${FILES[@]}"; do            
+            echo "$file"
+            f="$file"
+            echo $f
+            rsync -R $f upload
+            # gh release upload $TAG $f
+          done
+          zip -r upload.zip  upload
+          gh release upload $TAG upload.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
